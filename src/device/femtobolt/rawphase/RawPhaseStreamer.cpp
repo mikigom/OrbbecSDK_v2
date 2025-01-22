@@ -261,9 +261,29 @@ void RawPhaseStreamer::parseAndOutputFrame(std::shared_ptr<Frame> frame) {
     captureSize = inputInfo.nRows * inputInfo.nCols * inputInfo.nBitsPerSample / 8;
 
     rawFrameSize = captureSize * inputInfo.nStreams;
+    if(rawFrameSize > frame->getDataSize()) {
+        LOG_ERROR("rawFrameSize exceeds actual frame->getDataSize(), dropping frame");
+        return;
+    }
 
+    // We assume there's space after rawFrameSize for copying mipiHeadSize bytes
+    size_t requiredSize = rawFrameSize + mipiHeadSize;
+    if(requiredSize > frame->getDataSize()) {
+        LOG_ERROR("rawFrameSize + mipiHeadSize exceeds actual frame->getDataSize(), dropping frame");
+        return;
+    }
+
+    // The offset from which we copy the final row
+    ptrdiff_t lastRowOffset = inputInfo.nRows * 2;
+    if(rawFrameSize < lastRowOffset) {
+        LOG_ERROR("rawFrameSize < lastRowOffset, inconsistent inputInfo or truncated frame");
+        return;
+    }
+
+    uint8_t *srcData = (uint8_t *)data + rawFrameSize - lastRowOffset;
     uint8_t *dstData = (uint8_t *)data + rawFrameSize;
-    uint8_t *srcData = (uint8_t *)data + rawFrameSize - (inputInfo.nRows * 2);
+
+    // Only now do we safely copy
     memcpy(dstData, srcData, mipiHeadSize);
 
     auto   global      = depthEngineLoader_->getGlobalContext();
