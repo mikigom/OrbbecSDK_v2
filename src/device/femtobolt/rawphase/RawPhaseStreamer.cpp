@@ -274,7 +274,7 @@ void RawPhaseStreamer::parseAndOutputFrame(std::shared_ptr<Frame> frame) {
     }
 
     // The offset from which we copy the final row
-    ptrdiff_t lastRowOffset = inputInfo.nRows * 2;
+    size_t lastRowOffset = static_cast<size_t>(inputInfo.nRows) * 2;
     if(rawFrameSize < lastRowOffset) {
         LOG_ERROR("rawFrameSize < lastRowOffset, inconsistent inputInfo or truncated frame");
         return;
